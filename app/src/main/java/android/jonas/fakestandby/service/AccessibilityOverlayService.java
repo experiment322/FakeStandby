@@ -7,9 +7,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.graphics.PixelFormat;
+import android.jonas.fakestandby.R;
+import android.jonas.fakestandby.compatibility.OverlayNotification;
 import android.jonas.fakestandby.settings.NoCloseOptionSelectedNotification;
+import android.jonas.fakestandby.utils.Constants;
+import android.jonas.fakestandby.utils.OnHideFinishedListener;
+import android.jonas.fakestandby.utils.OnSwipeListener;
+import android.jonas.fakestandby.utils.OverlayView;
 import android.os.Build;
-import androidx.preference.PreferenceManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -17,12 +22,9 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
-import android.jonas.fakestandby.R;
-import android.jonas.fakestandby.compatibility.OverlayNotification;
-import android.jonas.fakestandby.utils.Constants;
-import android.jonas.fakestandby.utils.OnHideFinishedListener;
-import android.jonas.fakestandby.utils.OnSwipeListener;
-import android.jonas.fakestandby.utils.OverlayView;
+
+import androidx.preference.PreferenceManager;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -38,10 +40,18 @@ public class AccessibilityOverlayService extends AccessibilityService {
     // Static variables for screen dimensions
     private DisplayMetrics dm;
 
-    private final int flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS |
-            WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION | WindowManager.LayoutParams.FLAG_FULLSCREEN |
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
+    private final int flags =
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                    WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS |
+                    WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION |
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN |
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
+                    WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON;
 
     // Some objects that make the rendering possible
     static WindowManager windowManager;
@@ -197,6 +207,7 @@ public class AccessibilityOverlayService extends AccessibilityService {
                 PixelFormat.TRANSLUCENT);
         layoutParams.alpha = 1;
         layoutParams.gravity = Gravity.TOP | Gravity.START;
+        layoutParams.screenBrightness = 0.0F;
         layoutParams.x = -pixelOffset;
         layoutParams.y = -pixelOffset;
 
@@ -223,7 +234,7 @@ public class AccessibilityOverlayService extends AccessibilityService {
                     // One method to hide the overlay is to trigger 4 or more touches at the same time.
                     // This is only accepted while the overlay is just visible and doing nothing ("VISIBLE")
                     // or when it is currently dragged by the user ("DRAGGING").
-                    if(event.getPointerCount() >= 4 &&
+                    if (event.getPointerCount() >= 4 &&
                             (state == Constants.Overlay.State.VISIBLE ||
                                     state == Constants.Overlay.State.DRAGGING)) {
                         Log.i(getClass().getName(), "Hiding due to 4 or more simultaneous touches");
@@ -407,7 +418,7 @@ public class AccessibilityOverlayService extends AccessibilityService {
             BasePX = 0;
             // Start hiding animation
             view.setHiding(true);
-            view.setHidingVelocity(velocity/50);
+            view.setHidingVelocity(velocity / 50);
             view.setOnHideFinishedListener(new OnHideFinishedListener() {
                 @Override
                 public void onHideFinished() {
@@ -438,7 +449,8 @@ public class AccessibilityOverlayService extends AccessibilityService {
             view.setFalling(false);
             view.animate().alpha(0f).setDuration(600).setListener(new Animator.AnimatorListener() {
                 @Override
-                public void onAnimationStart(Animator animation) {}
+                public void onAnimationStart(Animator animation) {
+                }
 
                 @Override
                 public void onAnimationEnd(Animator animation) {
@@ -448,10 +460,12 @@ public class AccessibilityOverlayService extends AccessibilityService {
                 }
 
                 @Override
-                public void onAnimationCancel(Animator animation) {}
+                public void onAnimationCancel(Animator animation) {
+                }
 
                 @Override
-                public void onAnimationRepeat(Animator animation) {}
+                public void onAnimationRepeat(Animator animation) {
+                }
             }).start();
 
             Log.i(getClass().getName(), "Successfully started blending to transparent");
@@ -513,12 +527,12 @@ public class AccessibilityOverlayService extends AccessibilityService {
     private void writeServiceRunningPref(boolean value) {
         running = value;
         getSharedPreferences(Constants.Preferences.PREFERENCE_NAME, MODE_PRIVATE).edit().putBoolean(Constants.Preferences.IS_SERVICE_RUNNING, value).apply();
-        Log.i(getClass().getName(), "Successfully wrote preference " + Constants.Preferences.IS_SERVICE_RUNNING + " to " + (value ? "true":"false"));
+        Log.i(getClass().getName(), "Successfully wrote preference " + Constants.Preferences.IS_SERVICE_RUNNING + " to " + (value ? "true" : "false"));
     }
 
     private void writeOverlayShowingPref(boolean value) {
         getSharedPreferences(Constants.Preferences.PREFERENCE_NAME, MODE_PRIVATE).edit().putBoolean(Constants.Preferences.IS_OVERLAY_SHOWING, value).apply();
-        Log.i(getClass().getName(), "Successfully wrote preference " + Constants.Preferences.IS_OVERLAY_SHOWING + " to " + (value ? "true":"false"));
+        Log.i(getClass().getName(), "Successfully wrote preference " + Constants.Preferences.IS_OVERLAY_SHOWING + " to " + (value ? "true" : "false"));
     }
 
     private boolean getStartOnBootPref() {
@@ -548,7 +562,8 @@ public class AccessibilityOverlayService extends AccessibilityService {
     }
 
     @Override
-    public void onInterrupt() { }
+    public void onInterrupt() {
+    }
 
     @Override
     public boolean onUnbind(Intent intent) {

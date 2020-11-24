@@ -4,23 +4,21 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
 import android.jonas.fakestandby.permissions.PermissionUtils;
+import android.jonas.fakestandby.service.AccessibilityOverlayService;
+import android.jonas.fakestandby.utils.Constants;
 import android.os.Build;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.util.Log;
-import android.jonas.fakestandby.service.AccessibilityOverlayService;
-import android.jonas.fakestandby.utils.Constants;
-
-import androidx.fragment.app.DialogFragment;
 
 @TargetApi(Build.VERSION_CODES.N)
 public class OverlayQuickTile extends TileService {
 
     private Context context = null;
-    private Runnable start_overlay = new Runnable() {
+    private final Runnable start_overlay = new Runnable() {
         @Override
         public void run() {
-            if(!checkConditions()) {
+            if (!checkConditions()) {
                 return;
             }
 
@@ -36,13 +34,7 @@ public class OverlayQuickTile extends TileService {
     @Override
     public void onClick() {
         context = this;
-
-        if (isLocked()) {
-            unlockAndRun(start_overlay);
-        }else {
-            start_overlay.run();
-        }
-
+        start_overlay.run();
         onStartListening();
     }
 

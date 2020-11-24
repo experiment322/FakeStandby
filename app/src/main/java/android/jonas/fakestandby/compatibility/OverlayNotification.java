@@ -5,13 +5,14 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import android.jonas.fakestandby.R;
 import android.jonas.fakestandby.service.AccessibilityOverlayService;
 import android.jonas.fakestandby.settings.SettingsActivity;
 import android.jonas.fakestandby.utils.Constants;
 import android.os.Build;
+
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 
 public class OverlayNotification {
@@ -32,7 +33,7 @@ public class OverlayNotification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = context.getString(R.string.notification_default_channel_name);
             String description = context.getString(R.string.notification_default_channel_description);
-            int importance = NotificationManager.IMPORTANCE_MIN;
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
             NotificationChannel channel = new NotificationChannel(Constants.Notification.CHANNEL_ID, name, importance);
             channel.setDescription(description);
             NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
@@ -47,7 +48,8 @@ public class OverlayNotification {
                     .addAction(R.drawable.ic_baseline_settings_24,
                             context.getString(R.string.title_activity_settings),
                             settings_pendingIntent)
-                    .setContentIntent(start_pendingIntent);
+                    .setContentIntent(start_pendingIntent)
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT);
         } else {
             builder = new NotificationCompat.Builder(context)
                     .setSmallIcon(R.mipmap.simple_tile_icon_36dp)
@@ -59,7 +61,7 @@ public class OverlayNotification {
                             context.getString(R.string.title_activity_settings),
                             settings_pendingIntent)
                     .setContentIntent(start_pendingIntent)
-                    .setPriority(NotificationCompat.PRIORITY_MIN);
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT);
         }
 
 
