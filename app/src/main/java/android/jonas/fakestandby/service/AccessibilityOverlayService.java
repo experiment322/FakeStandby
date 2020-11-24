@@ -15,6 +15,7 @@ import android.jonas.fakestandby.utils.OnHideFinishedListener;
 import android.jonas.fakestandby.utils.OnSwipeListener;
 import android.jonas.fakestandby.utils.OverlayView;
 import android.os.Build;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -23,17 +24,24 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 
+import androidx.annotation.NonNull;
 import androidx.preference.PreferenceManager;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+
+import eu.chainfire.libsuperuser.Shell;
 
 public class AccessibilityOverlayService extends AccessibilityService {
 
     private static final int pixelOffset = 400;
 
     public static boolean running = false;
+
+    private boolean hasRoot = false;
 
     private PhoneLockReceiver phoneLockReceiver;
 
@@ -190,6 +198,9 @@ public class AccessibilityOverlayService extends AccessibilityService {
         state = Constants.Overlay.State.INITIALIZING;
         Log.i(getClass().getName(), "Initializing...");
 
+        // Check for root access
+        hasRoot = Shell.SU.available();
+
         // Theme the app (is used for some dialogs later).
         getApplication().setTheme(R.style.AppTheme);
 
@@ -319,6 +330,43 @@ public class AccessibilityOverlayService extends AccessibilityService {
         Log.i(getClass().getName(), "Initialization finished");
     }
 
+    private void toggleScreenBacklight(boolean powered) {
+        if (hasRoot) {
+            Log.i(getClass().getName(), "Root is available, setting screen backlight " + (powered ? "ON" : "OFF"));
+
+            final int brightness = powered ? 127 : 0; // actual brightness value, 0 -> unlit
+            final int permissions = powered ? 664 : 444; // add/remove write permission over brightness
+            final List<String> commands = Arrays.asList(
+                    "echo " + brightness + " > /sys/class/leds/lcd-backlight/brightness",
+                    "chmod " + permissions + " /sys/class/leds/lcd-backlight/brightness"
+            );
+            if (powered) {
+                // We need to reverse the order of the commands to have write permissions first
+                Collections.reverse(commands);
+            }
+
+            final Shell.OnSyncCommandLineListener commandListener = new Shell.OnSyncCommandLineListener() {
+                @Override
+                public void onSTDERR(@NonNull String line) {
+                    Log.e(getClass().getName(), line);
+                }
+
+                @Override
+                public void onSTDOUT(@NonNull String line) {
+                    Log.i(getClass().getName(), line);
+                }
+            };
+
+            try {
+                final String command = TextUtils.join(" && ", commands);
+                Log.i(getClass().getName(), "Running command with root:\n" + command);
+                Shell.Pool.SU.run(command, commandListener);
+            } catch (Shell.ShellDiedException e) {
+                Log.e(getClass().getName(), "Failed to run root command: " + e.getMessage());
+            }
+        }
+    }
+
     private void addView() {
         // Check for the right state
         if (state == Constants.Overlay.State.INITIALIZED ||
@@ -328,6 +376,8 @@ public class AccessibilityOverlayService extends AccessibilityService {
             layoutParams.height = dm.heightPixels + 2 * pixelOffset;
             // Add the view component
             windowManager.addView(view, layoutParams);
+            // Turn off screen backlight using root access if available
+            toggleScreenBacklight(false);
             // Set the state
             state = Constants.Overlay.State.ADDED;
             Log.i(getClass().getName(), "Successfully added view");
@@ -338,6 +388,8 @@ public class AccessibilityOverlayService extends AccessibilityService {
 
     private void removeView() {
         try {
+            // Turn on screen backlight using root access if available
+            toggleScreenBacklight(true);
             // Remove the view component
             windowManager.removeView(view);
             // Set the state
